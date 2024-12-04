@@ -28,9 +28,12 @@ let loadFile () =
 
 // Text Analysis Function
 let analyzeText (text: string) =
-    let words = text.Split([| ' '; '\n'; '\t'; '.'; ','; '!' |], StringSplitOptions.RemoveEmptyEntries)
-    let sentences = text.Split([| '.'; '!'; '?' |], StringSplitOptions.RemoveEmptyEntries)
-    let paragraphs = text.Split([| '\n'; '\r' |], StringSplitOptions.RemoveEmptyEntries)
+    // Remove extra whitespace or break lines
+    let cleanText = text.Replace("\r\n", "\n").Replace("\r", "\n").Trim()
+    let words = cleanText.Split([| ' '; '\n'; '\t'; '.'; ','; '!' |], StringSplitOptions.RemoveEmptyEntries)
+    let sentences = cleanText.Split([| '.'; '!'; '?' |], StringSplitOptions.RemoveEmptyEntries)
+    let paragraphs = cleanText.Split([| '\n' |], StringSplitOptions.RemoveEmptyEntries)
+
 
     let wordCount = words.Length
     let sentenceCount = sentences.Length
@@ -41,12 +44,11 @@ let analyzeText (text: string) =
         |> Seq.groupBy (fun word -> word)
         |> Seq.map (fun (word: string, occurrences: seq<string>) -> word, Seq.length occurrences)
         |> Seq.sortByDescending snd
-        |> Seq.take 10
+        |> Seq.truncate 10  
 
-    let avgSentenceLength = float wordCount / float sentenceCount
+    let avgSentenceLength = if sentenceCount > 0 then float wordCount / float sentenceCount else 0.0
 
     (wordCount, sentenceCount, paragraphCount, wordFrequency, avgSentenceLength)
-
 
 // Display Results Function
 let displayResults () =
@@ -70,4 +72,4 @@ loadButton.Click.Add(fun _ -> loadFile())
 do
   Application.Run(form)
 
-//Intial version
+
