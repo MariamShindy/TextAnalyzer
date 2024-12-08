@@ -5,31 +5,36 @@ open System.Drawing
 
 // Function to create the form
 let createForm () =
-    new Form(Text = "Text Analyzer", Width = 800, Height = 600, BackColor = Color.LightGray)
+    new Form(Text = "Text Analyzer", Width = 900, Height = 700, StartPosition = FormStartPosition.CenterScreen, BackColor = Color.FromArgb(240, 240, 240))
 
 // Function to create the text box
 let createTextBox () =
-    new TextBox(Multiline = true, Width = 700, Height = 200, Top = 20, Left = 20, ScrollBars = ScrollBars.Vertical, Font = new Font("Arial", 12f))
+    new TextBox(Multiline = true, Dock = DockStyle.Top, Height = 200, ScrollBars = ScrollBars.Vertical, Font = new Font("STIXSizeTwoSym", 10f, FontStyle.Bold), Padding = Padding(10))
 
-// Function to create the analyze button
-let createAnalyzeButton () =
-    new Button(Text = "Analyze", Top = 240, Left = 20, Width = 100, Height = 40, BackColor = Color.LightBlue, Font = new Font("Arial", 10f))
-
-// Function to create the load button
-let createLoadButton () =
-    new Button(Text = "Load File", Top = 240, Left = 140, Width = 100, Height = 40, BackColor = Color.LightGreen, Font = new Font("Arial", 10f))
-
-// Function to create the clear button
-let createClearButton () =
-    new Button(Text = "Clear", Top = 240, Left = 260, Width = 100, Height = 40, BackColor = Color.LightCoral, Font = new Font("Arial", 10f))
+// Function to create a button
+let createButton text color =
+    new Button(Text = text, Height = 40, Width = 120, BackColor = color, FlatStyle = FlatStyle.Popup, Font = new Font("STIXSizeTwoSym", 12f, FontStyle.Bold), Margin = Padding(10))
 
 // Function to create the progress bar
 let createProgressBar () =
-    new ProgressBar(Top = 290, Left = 20, Width = 750, Height = 20, Maximum = 100, Value = 0, Style = ProgressBarStyle.Blocks)
+    new ProgressBar(Dock = DockStyle.Top, Height = 20, Maximum = 100, Style = ProgressBarStyle.Blocks, Margin = Padding(10))
 
-// Function to create the result label
-let createResultLabel () =
-    new Label(Top = 320, Left = 20, Width = 750, Height = 230, AutoSize = true, Font = new Font("Arial", 10f))
+// Function to create a scrollable panel for the result label
+let createScrollableResultPanel () =
+    let panel = new Panel(Dock = DockStyle.Fill, AutoScroll = true, Padding = Padding(10), BackColor = Color.White)
+    let label = new Label(AutoSize = true, Font = new Font("STIXSizeTwoSym", 10f, FontStyle.Bold))
+    panel.Controls.Add(label)
+    panel, label
+
+// Function to create a panel with buttons
+let createButtonPanel (buttons: Button list) =
+    let panel = new FlowLayoutPanel(Dock = DockStyle.Top, FlowDirection = FlowDirection.LeftToRight, Height = 70, Padding = Padding(10))
+    buttons |> List.iter (fun btn -> panel.Controls.Add(btn))
+    panel
+
+// Function to create a spacer panel
+let createSpacer height =
+    new Panel(Dock = DockStyle.Top, Height = height, BackColor = Color.Transparent)
 
 // Function to load a file into the text box
 let loadFile (textBox: TextBox) () =
@@ -53,26 +58,31 @@ let analyzeText (text: string) =
         |> Seq.groupBy (fun word -> word)
         |> Seq.map (fun (word: string, occurrences: seq<string>) -> word, Seq.length occurrences)
         |> Seq.sortByDescending snd
-        |> Seq.truncate 10  
 
+    let top10Words = wordFrequency |> Seq.truncate 10
     let avgSentenceLength = if sentenceCount > 0 then float wordCount / float sentenceCount else 0.0
 
-    (wordCount, sentenceCount, paragraphCount, wordFrequency, avgSentenceLength)
+    (wordCount, sentenceCount, paragraphCount, wordFrequency, top10Words, avgSentenceLength)
 
 // Function to display the analysis results
 let displayResults (textBox: TextBox) (resultLabel: Label) (progressBar: ProgressBar) =
-    progressBar.Value <- 10 // Update progress bar
-    let (wordCount, sentenceCount, paragraphCount, wordFrequency, avgSentenceLength) =
+    progressBar.Value <- 20 // Simulate progress
+    let (wordCount, sentenceCount, paragraphCount, allWordFrequency, top10WordFrequency, avgSentenceLength) =
         analyzeText textBox.Text
-    progressBar.Value <- 100 // Update progress bar to indicate completion
+    progressBar.Value <- 100 // Complete progress
 
-    let freqString =
-        wordFrequency
+    let top10String =
+        top10WordFrequency
         |> Seq.map (fun (word, count) -> sprintf "%s: %d" word count)
         |> String.concat "\n"
 
-    resultLabel.Text <- sprintf "Words: %d\nSentences: %d\nParagraphs: %d\nAverage Sentence Length: %.2f\nWord Frequency (Top 10):\n%s" 
-                            wordCount sentenceCount paragraphCount avgSentenceLength freqString
+    let allWordsString =
+        allWordFrequency
+        |> Seq.map (fun (word, count) -> sprintf "%s: %d" word count)
+        |> String.concat "\n"
+
+    resultLabel.Text <- sprintf "Words: %d\nSentences: %d\nParagraphs: %d\nAverage Sentence Length: %.2f\n\nTop 10 Words:\n%s\n\nAll Words:\n%s" 
+                            wordCount sentenceCount paragraphCount avgSentenceLength top10String allWordsString
 
 // Function to clear the text box, result label, and progress bar
 let clearForm (textBox: TextBox) (resultLabel: Label) (progressBar: ProgressBar) =
@@ -80,28 +90,32 @@ let clearForm (textBox: TextBox) (resultLabel: Label) (progressBar: ProgressBar)
     resultLabel.Text <- ""
     progressBar.Value <- 0
 
-// Function to set up the event handlers
-let setupEventHandlers (form: Form) (textBox: TextBox) (resultLabel: Label) (progressBar: ProgressBar) (analyzeButton: Button) (loadButton: Button) (clearButton: Button) =
-    analyzeButton.Click.Add(fun _ -> displayResults textBox resultLabel progressBar)
-    loadButton.Click.Add(fun _ -> loadFile textBox ())
-    clearButton.Click.Add(fun _ -> clearForm textBox resultLabel progressBar)
-
-// Main function to create the form and set up the application
+// Main function
 [<STAThread>]
 do
     let form = createForm ()
     let textBox = createTextBox ()
-    let analyzeButton = createAnalyzeButton ()
-    let loadButton = createLoadButton ()
-    let clearButton = createClearButton ()
     let progressBar = createProgressBar ()
-    let resultLabel = createResultLabel ()
+    
+    // Create a scrollable panel for results
+    let resultPanel, resultLabel = createScrollableResultPanel ()
+    
+    // Buttons with custom colors
+    let analyzeButton = createButton "Analyze" Color.LightBlue
+    let loadButton = createButton "Load File" Color.LightGreen
+    let clearButton = createButton "Clear" Color.IndianRed
 
-    form.Controls.AddRange [| textBox; analyzeButton; loadButton; clearButton; progressBar; resultLabel |]
+    // Create button panel and spacer
+    let buttonPanel = createButtonPanel [analyzeButton; loadButton; clearButton]
+    let spacer = createSpacer 20
 
     // Set up event handlers
-    setupEventHandlers form textBox resultLabel progressBar analyzeButton loadButton clearButton
+    analyzeButton.Click.Add(fun _ -> displayResults textBox resultLabel progressBar)
+    loadButton.Click.Add(fun _ -> loadFile textBox ())
+    clearButton.Click.Add(fun _ -> clearForm textBox resultLabel progressBar)
+
+    // Add controls to the form
+    form.Controls.AddRange [| resultPanel; spacer; progressBar; buttonPanel; textBox |]
 
     // Run the application
     Application.Run(form)
-
