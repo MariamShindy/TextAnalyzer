@@ -9,11 +9,11 @@ let createForm () =
 
 // Function to create the text box
 let createTextBox () =
-    new TextBox(Multiline = true, Dock = DockStyle.Top, Height = 200, ScrollBars = ScrollBars.Vertical, Font = new Font("STIXSizeTwoSym", 10f, FontStyle.Bold), Padding = Padding(10))
+    new TextBox(Multiline = true, Dock = DockStyle.Top, Height = 200, ScrollBars = ScrollBars.Vertical, Font = new Font("STIXSizeTwoSym", 10f, FontStyle.Bold), Padding = Padding(15))
 
 // Function to create a button
 let createButton text color =
-    new Button(Text = text, Height = 40, Width = 120, BackColor = color, FlatStyle = FlatStyle.Popup, Font = new Font("STIXSizeTwoSym", 12f, FontStyle.Bold), Margin = Padding(10))
+    new Button(Text = text, Height = 40, Width = 120, BackColor = color, FlatStyle = FlatStyle.Popup, Font = new Font("STIXSizeTwoSym", 12f, FontStyle.Bold), Margin = Padding(110,10,10,10))
 
 // Function to create the progress bar
 let createProgressBar () =
@@ -39,8 +39,13 @@ let createSpacer height =
 // Function to load a file into the text box
 let loadFile (textBox: TextBox) () =
     let openFileDialog = new OpenFileDialog(Filter = "Text Files|*.txt")
-    if openFileDialog.ShowDialog() = DialogResult.OK then
-        textBox.Text <- File.ReadAllText(openFileDialog.FileName)
+    let dialogResult = openFileDialog.ShowDialog()
+    if dialogResult = DialogResult.OK then
+        let fileContent = File.ReadAllText(openFileDialog.FileName)
+        if String.IsNullOrWhiteSpace(fileContent) then
+            MessageBox.Show("The file is empty. Please upload a valid file.", "Empty File", MessageBoxButtons.OK, MessageBoxIcon.Warning) |> ignore
+        else
+            textBox.Text <- fileContent
 
 // Function to analyze the text
 let analyzeText (text: string) =
@@ -64,25 +69,29 @@ let analyzeText (text: string) =
 
     (wordCount, sentenceCount, paragraphCount, wordFrequency, top10Words, avgSentenceLength)
 
-// Function to display the analysis results
+// Function to display the analysis results with an additional check for empty text
 let displayResults (textBox: TextBox) (resultLabel: Label) (progressBar: ProgressBar) =
-    progressBar.Value <- 20 // Simulate progress
-    let (wordCount, sentenceCount, paragraphCount, allWordFrequency, top10WordFrequency, avgSentenceLength) =
-        analyzeText textBox.Text
-    progressBar.Value <- 100 // Complete progress
+    // Check if the text box is empty
+    if String.IsNullOrWhiteSpace(textBox.Text) then
+        MessageBox.Show("Please upload or enter some text to analyze.", "No Text To Analyze", MessageBoxButtons.OK, MessageBoxIcon.Warning) |> ignore
+    else
+        progressBar.Value <- 20 // Simulate progress
+        let (wordCount, sentenceCount, paragraphCount, allWordFrequency, top10WordFrequency, avgSentenceLength) =
+            analyzeText textBox.Text
+        progressBar.Value <- 100 // Complete progress
 
-    let top10String =
-        top10WordFrequency
-        |> Seq.map (fun (word, count) -> sprintf "%s: %d" word count)
-        |> String.concat "\n"
+        let top10String =
+            top10WordFrequency
+            |> Seq.map (fun (word, count) -> sprintf "%s: %d" word count)
+            |> String.concat "\n"
 
-    let allWordsString =
-        allWordFrequency
-        |> Seq.map (fun (word, count) -> sprintf "%s: %d" word count)
-        |> String.concat "\n"
+        let allWordsString =
+            allWordFrequency
+            |> Seq.map (fun (word, count) -> sprintf "%s: %d" word count)
+            |> String.concat "\n"
 
-    resultLabel.Text <- sprintf "Words: %d\nSentences: %d\nParagraphs: %d\nAverage Sentence Length: %.2f\n\nTop 10 Words:\n%s\n\nAll Words:\n%s" 
-                            wordCount sentenceCount paragraphCount avgSentenceLength top10String allWordsString
+        resultLabel.Text <- sprintf "Words : %d\nSentences : %d\nParagraphs : %d\nAverage Sentence Length : %.2f\n\n------------------\nTop 10 Words :\n%s\n------------------\nAll Words :\n%s\n------------------" 
+                             wordCount sentenceCount paragraphCount avgSentenceLength top10String allWordsString
 
 // Function to clear the text box, result label, and progress bar
 let clearForm (textBox: TextBox) (resultLabel: Label) (progressBar: ProgressBar) =
@@ -117,5 +126,6 @@ do
     // Add controls to the form
     form.Controls.AddRange [| resultPanel; spacer; progressBar; buttonPanel; textBox |]
 
-    // Run the application
-    Application.Run(form)
+    // Run the application  
+    Application.Run(form) 
+
