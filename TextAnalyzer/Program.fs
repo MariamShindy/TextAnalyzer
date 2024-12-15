@@ -1,12 +1,14 @@
 ﻿open System
 open System.Windows.Forms
 open System.Drawing
-open TextAnalyzer.TextAnalyzer
-open UIHelpers.UIHelpers
+open TextAnalysis.TextAnalyzer
+open UIComponents.UIHelpers
 
 // Main function
-[<STAThread>]
+//application should run with a single-threaded apartment
+[<STAThread>] 
 do
+//Create form and UI elements
     let form = createForm ()
     let textBox = createTextBox ()
     let progressBar = createProgressBar ()
